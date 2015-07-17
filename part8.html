@@ -20,7 +20,8 @@ function preload() {
 
     game.load.image('chessboard', 'assets/chessboard.jpg');
     game.load.image('chessPieces', 'assets/chess_pieces.png');
-    game.load.image('cube', 'assets/cubo.png');
+    game.load.image('blackCube', 'assets/cube.png');
+    game.load.image('whiteCube', 'assets/whiteCube.png');
 
     game.load.image('sky', 'assets/sky.png');
     game.load.image('ground', 'assets/platform.png');
@@ -54,8 +55,22 @@ function create() {
 
     board.scale.setTo(0.45, 0.45);
 
-    var cube = game.add.sprite(223, 180, 'cube');
-    cube.scale.setTo(0.61, 0.61);
+    var whiteCube = game.cache.getImage('whiteCube');
+    var blackCube = game.cache.getImage('blackCube');
+
+    //var cube = game.add.sprite(162, 58, 'whiteCube');
+    //cube.scale.setTo(0.61, 0.61);
+    var initPosBoardX = 162;
+    var initPosBoardY = 58;
+
+    var cubeType = { 1: 'whiteCube', 2: 'blackCube' };
+
+    var currentCube;
+    for( var x = 1; x == 8; x++ ){
+        for( var y = 1; y == 8; y++ ){
+            game.add.sprite(initPosBoardX+(x*61), initPosBoardY+(y*61), currentCube);
+        }
+    }
 
     pieces = game.add.group();
 
