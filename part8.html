@@ -3,7 +3,9 @@
 <head> 
 	<meta charset="UTF-8" />
     <title>Ajedrez</title>
-	<script type="text/javascript" src="js/phaser.min.js"></script>
+    <script type="text/javascript" src="js/require.js"></script>
+    <script type="text/javascript" src="js/phaser.min.js"></script>
+    <script type="text/javascript" src="js/chess.js"></script>
     <style type="text/css">
         body {
             margin: 0;
@@ -14,86 +16,204 @@
 
 <script type="text/javascript">
 
+// Initialize chess js
+
+var chess = new Chess();
+chess.move({ from: 'g2', to: 'g3' });
+/*var wewef = chess.history();
+console.log(wewef)*/
+
+/*var pgn = ['[Event "Casual Game"]',
+    '[Site "Berlin GER"]',
+    '[Date "1852.??.??"]',
+    '[EventDate "?"]',
+    '[Round "?"]',
+    '[Result "1-0"]',
+    '[White "Adolf Anderssen"]',
+    '[Black "Jean Dufresne"]',
+    '[ECO "C52"]',
+    '[WhiteElo "?"]',
+    '[BlackElo "?"]',
+    '[PlyCount "47"]',
+    '',
+    '1.e4 e5 2.Nf3 Nc6 3.Bc4 Bc5 4.b4 Bxb4 5.c3 Ba5 6.d4 exd4 7.O-O',
+    'd3 8.Qb3 Qf6 9.e5 Qg6 10.Re1 Nge7 11.Ba3 b5 12.Qxb5 Rb8 13.Qa4',
+    'Bb6 14.Nbd2 Bb7 15.Ne4 Qf5 16.Bxd3 Qh5 17.Nf6+ gxf6 18.exf6',
+    'Rg8 19.Rad1 Qxf3 20.Rxe7+ Nxe7 21.Qxd7+ Kxd7 22.Bf5+ Ke8',
+    '23.Bd7+ Kf8 24.Bxe7# 1-0'];
+chess.load_pgn(pgn.join('\n'));
+var moveHistory = chess.history({ verbose: true });
+var i = 1;
+
+while (moveHistory.length > 0) {
+    var p1Move = moveHistory.shift(),
+            p2Move = moveHistory.shift(),
+            p1c = p1Move.from + '-' + p1Move.to,
+            p2c = (p2Move == undefined) ? '' : p2Move.from + '-' + p2Move.to;
+    console.log(i + '. ' + p1c + ' ' + p2c );
+    i++;
+}*/
+
+
+
 var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
 
-function preload() {
+function preload( ) {
 
     game.load.image('chessboard', 'assets/chessboard.jpg');
     game.load.image('chessPieces', 'assets/chess_pieces.png');
     game.load.image('blackCube', 'assets/cube.png');
     game.load.image('whiteCube', 'assets/whiteCube.png');
-
     game.load.image('sky', 'assets/sky.png');
-    game.load.image('ground', 'assets/platform.png');
-    game.load.image('star', 'assets/star.png');
-    game.load.spritesheet('dude', 'assets/dude.png', 32, 48);
+
+    // Chess pieces
+    game.load.image('black_bishop', 'assets/chessPieces/black_bishop.png');
+    game.load.image('black_knight', 'assets/chessPieces/black_knight.png');
+    game.load.image('black_king', 'assets/chessPieces/black_king.png');
+    game.load.image('black_pawn', 'assets/chessPieces/black_pawn.png');
+    game.load.image('black_queen', 'assets/chessPieces/black_queen.png');
+    game.load.image('black_tower', 'assets/chessPieces/black_tower.png');
+    game.load.image('white_bishop', 'assets/chessPieces/white_bishop.png');
+    game.load.image('white_knight', 'assets/chessPieces/white_knight.png');
+    game.load.image('white_king', 'assets/chessPieces/white_king.png');
+    game.load.image('white_pawn', 'assets/chessPieces/white_pawn.png');
+    game.load.image('white_queen', 'assets/chessPieces/white_queen.png');
+    game.load.image('white_tower', 'assets/chessPieces/white_tower.png');
 
 }
 
 var board;
 var pieces;
+var cubes;
+var arrayCubes = {};
 var player;
 var platforms;
 var cursors;
 var rect;
 
-var stars;
+var positions = [];
 
-function create() {
+function create( ) {
 
     //  We're going to be using physics, so enable the Arcade Physics system
     game.physics.startSystem(Phaser.Physics.ARCADE);
 
-    //  A simple background for our game
+    //  A simple background
     game.add.sprite(0, 0, 'sky');
 
     var boardImage = game.cache.getImage('chessboard');
-
-
 
     board = game.add.sprite(game.world.centerX - (boardImage.width/2)*0.45, game.world.centerY - (boardImage.height/2)*0.45, 'chessboard');
 
     board.scale.setTo(0.45, 0.45);
 
-    var whiteCube = game.cache.getImage('whiteCube');
-    var blackCube = game.cache.getImage('blackCube');
+    // Declare left top of board
+    var initPosBoardX = 160;
+    var initPosBoardY = 60;
 
-    //var cube = game.add.sprite(162, 58, 'whiteCube');
-    //cube.scale.setTo(0.61, 0.61);
-    var initPosBoardX = 162;
-    var initPosBoardY = 58;
+    //Piece width and height
+    var pieceWidth = 60;
+    var pieceHeight = 60;
 
-    var cubeType = { 1: 'whiteCube', 2: 'blackCube' };
+    // Type of cubes
+    var cubeType = { 0: 'blackCube', 1: 'whiteCube' };
 
+    var letterACode = 97;
+    var position;
+
+    var arrayPosition = [8,7,6,5,4,3,2,1];
+
+    // Print board
+    cubes = game.add.group();
     var currentCube;
-    for( var x = 1; x == 8; x++ ){
-        for( var y = 1; y == 8; y++ ){
-            game.add.sprite(initPosBoardX+(x*61), initPosBoardY+(y*61), currentCube);
+    for( var x = 0; x <= 7; x++ ){
+        for( var y = 0; y <= 7; y++ ){
+            currentCube = (x + y) % 2;
+            // Add position property to cube sprite
+            var xPos = arrayPosition[y];
+            position = String.fromCharCode(letterACode+x) + xPos;
+            arrayCubes[position] = cubes.create(initPosBoardX+(x*60), initPosBoardY+(y*60), cubeType[currentCube]);
+            arrayCubes[position].pos = position;
         }
     }
 
-    pieces = game.add.group();
+    //Print pieces
+    var piece;
 
+    pieces = game.add.group(); //Create pieces group
+    //Add all pieces to group
+    piece = pieces.create(initPosBoardX, initPosBoardY, 'black_tower');
+    piece.currentPos = 'a8';
+    piece = pieces.create(initPosBoardX+(pieceWidth), initPosBoardY, 'black_knight');
+    piece.currentPos = 'b8';
+    piece = pieces.create(initPosBoardX+(pieceWidth*2), initPosBoardY, 'black_bishop');
+    piece = pieces.create(initPosBoardX+(pieceWidth*3), initPosBoardY, 'black_queen');
+    piece = pieces.create(initPosBoardX+(pieceWidth*4), initPosBoardY, 'black_king');
+    piece = pieces.create(initPosBoardX+(pieceWidth*5), initPosBoardY, 'black_bishop');
+    piece = pieces.create(initPosBoardX+(pieceWidth*6), initPosBoardY, 'black_knight');
+    piece = pieces.create(initPosBoardX+(pieceWidth*7), initPosBoardY, 'black_tower');
+    for( x = 0; x <= 7; x++ ){ // print all pawns
+        piece = pieces.create(initPosBoardX+(x*pieceHeight), initPosBoardY+pieceWidth, 'black_pawn');
+    }
 
+    piece = pieces.create(initPosBoardX, initPosBoardY+(pieceHeight*7), 'white_tower');
+    piece = pieces.create(initPosBoardX+(pieceWidth), initPosBoardY+(pieceHeight*7), 'white_knight');
+    piece = pieces.create(initPosBoardX+(pieceWidth*2), initPosBoardY+(pieceHeight*7), 'white_bishop');
+    piece = pieces.create(initPosBoardX+(pieceWidth*3), initPosBoardY+(pieceHeight*7), 'white_queen');
+    piece = pieces.create(initPosBoardX+(pieceWidth*4), initPosBoardY+(pieceHeight*7), 'white_king');
+    piece = pieces.create(initPosBoardX+(pieceWidth*5), initPosBoardY+(pieceHeight*7), 'white_bishop');
+    piece = pieces.create(initPosBoardX+(pieceWidth*6), initPosBoardY+(pieceHeight*7), 'white_knight');
+    piece = pieces.create(initPosBoardX+(pieceWidth*7), initPosBoardY+(pieceHeight*7), 'white_tower');
+    for( x = 0; x <= 7; x++ ){ // print all pawns
+        piece = pieces.create(initPosBoardX+(x*pieceHeight), initPosBoardY+(pieceHeight*6), 'white_pawn');
+    }
 
-    /*var piecesItems = {
-        'pawn'      : pieces.create(),
-        'knight'    : 2,
-        'bishop'    : 3,
-        'rook'      : 4,
-        'queen'     : 5,
-        'king'      : 6
-    };*/
+    // Bind callback on drag start and stop events
+    pieces.children.forEach(function( piece ){
+        piece.inputEnabled = true;
+        piece.input.enableDrag();
+        piece.events.onDragStop.add(stopDrag, this);
+        piece.events.onDragStart.add(initDrag, this);
+    });
 
-    
 }
 
-function update() {
-
+function update( ) {
+    //game.debug.spriteInfo(sprite, 32, 32);
+    /*if (pieces[0].input.pointerOver()) {
+        console.log('overr')
+    }*/
 
 }
 
+function initDrag( sprite )
+{
+    var currentPos = sprite.currentPos;
+    var enabledMoves = chess.moves({square: currentPos});
+    enabledMoves.forEach(function( enabledMove ){
+        var parsedMove = enabledMove.slice(-2);
+        arrayCubes[parsedMove].tint = 'yellow';
+    });
+    //console.log(enabledMoves)
+    //TODO calcular las posiciones posibles para esa pieza y marcarlas de alguna manera
+}
 
+function stopDrag( sprite )
+{
+    // TODO Si se ha soltado sobre una de las posiciones posibles la colocamos encima, sino la devolvemos a su origen
+    console.log(sprite)
+}
+
+function animateCubes()
+{
+    this.game.add.tween(this.lightning)
+            .to({ alpha: 0.5 }, 100, Phaser.Easing.Bounce.Out)
+            .to({ alpha: 1.0 }, 100, Phaser.Easing.Bounce.Out)
+            .to({ alpha: 0.5 }, 100, Phaser.Easing.Bounce.Out)
+            .to({ alpha: 1.0 }, 100, Phaser.Easing.Bounce.Out)
+            .to({ alpha: 0 }, 250, Phaser.Easing.Cubic.In)
+            .start();
+}
 
 
 </script>
