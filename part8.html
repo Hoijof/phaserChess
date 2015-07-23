@@ -86,7 +86,7 @@ var board;
 var pieces;
 var cubes;
 var arrayCubes = {};
-var piecesByPos = {}
+var piecesByPos = {};
 var player;
 var platforms;
 var cursors;
@@ -194,61 +194,52 @@ function create( ) {
         piece.input.enableDrag();
         piece.events.onDragStop.add(stopDrag, this);
         piece.events.onDragStart.add(initDrag, this);
-        piece.oldPosition = 'undefined';
+        delete piece.oldPosition;
     });
 
 }
 
 function update( ) {
-    if( chess.game_over() ){
+    /*if( chess.game_over() ){
         console.log('juego terminado')
-    }
+    }*/
 
 }
 
 function initDrag( sprite )
 {
-    console.log(sprite)
     sprite.oldPositionf = sprite.position.clone();
     var currentPos = sprite.currentPos;
     var enabledMoves = chess.moves({square: currentPos});
-    game.tweens.removeAll();
     enabledMoves.forEach(function( enabledMove ){
         var parsedMove = enabledMove.slice(-2);
-        animateCubes(arrayCubes[parsedMove]);
+        //animateCubes(arrayCubes[parsedMove]); //TODO comprobar animaciones
     });
 }
 
 function stopDrag( sprite )
 {
-    //console.log(sprite);
-
     var currentPos = sprite.currentPos;
-    var enabledMoves = chess.moves({square: currentPos});
-    var foundPosition = false;
-    foundPosition = enabledMoves.some(function( enabledMove ){
-        var parsedMove = enabledMove.slice(-2);
-        var distance = game.physics.arcade.distanceBetween(sprite, arrayCubes[parsedMove]);
-        if( distance < 30 ){
-            sprite.x = arrayCubes[parsedMove].x;
-            sprite.y = arrayCubes[parsedMove].y;
-            chess.move({from: sprite.currentPos, to: parsedMove});
-            sprite.currentPos = parsedMove;
-            if( typeof piecesByPos[parsedMove] !== 'undefined' ){ // TODO pasar a funcion
-                piecesByPos[parsedMove].destroy();
-            }
+    var enabledMoves = chess.moves({square: currentPos, verbose: true});
+    var foundPosition = enabledMoves.some(function( enabledMove ){ //Each possible moves
+        var distance = game.physics.arcade.distanceBetween(sprite, arrayCubes[enabledMove.to]);
+        if( distance < 30 ){ // If drop piece on possible place
+            movePiece(currentPos, enabledMove.to);
+
+            window.setTimeout(makeRandomMove, 350);
+
             return true;
         }
-
     });
+
     if( !foundPosition ){
         sprite.x = sprite.oldPositionf.x;
         sprite.y = sprite.oldPositionf.y;
     }
 
-    if(foundPosition){
-        window.setTimeout(makeRandomMove, 250);
-    }
+    /*if(foundPosition){
+
+    }*/
 
 }
 
@@ -275,12 +266,10 @@ function checkOverlap(spriteA, spriteB) {
 function animateCubes( cubeSprite )
 {
     this.game.add.tween(cubeSprite)
-            .to({ alpha: 0.5 }, 1000, Phaser.Easing.Bounce.Out)
-            .to({ alpha: 1.0 }, 1000, Phaser.Easing.Bounce.Out)
-            .to({ alpha: 0.5 }, 1000, Phaser.Easing.Bounce.Out)
-            .to({ alpha: 1.0 }, 1000, Phaser.Easing.Bounce.Out)
-            .to({ alpha: 0.5 }, 1000, Phaser.Easing.Cubic.In)
-            .to({ alpha: 1.0 }, 1000, Phaser.Easing.Cubic.In)
+            .to({ alpha: 0.5 }, 800, Phaser.Easing.Bounce.Out)
+            .to({ alpha: 1.0 }, 800, Phaser.Easing.Bounce.Out)
+            .to({ alpha: 0.5 }, 800, Phaser.Easing.Bounce.Out)
+            .to({ alpha: 1.0 }, 800, Phaser.Easing.Bounce.Out)
             .start();
 }
 
@@ -292,25 +281,41 @@ function makeRandomMove ()
 {
     var possibleMoves = chess.moves({ verbose: true });
 
-    // game over
+    // Check game over
     if (possibleMoves.length === 0) return; // TODO finalizar juego
 
     var randomIndex = Math.floor(Math.random() * possibleMoves.length);
     var from = possibleMoves[randomIndex].from;
     var to = possibleMoves[randomIndex].to;
 
+    movePiece(from, to);
+}
+
+/**
+ * Make piece movement from to ( position )
+ *
+ * @param from
+ * @param to
+ */
+function movePiece( from, to )
+{
+    console.log('inicio')
     if( typeof piecesByPos[to] !== 'undefined' ){ // If destination pos is not empty, remove sprite
         piecesByPos[to].destroy();
     }
 
+    // Set new piece position
     piecesByPos[from].x = arrayCubes[to].x;
     piecesByPos[from].y = arrayCubes[to].y;
 
+    piecesByPos[to] = piecesByPos[from]; // Override piece position
+    console.log()
+    delete piecesByPos[from];
+    piecesByPos[to].currentPos = to;
+    console.log(piecesByPos[to])
 
-    piecesByPos[to] = piecesByPos[from]; // Override piece position // TODO eliminar ficha si habia alguna
-
-    chess.move(possibleMoves[randomIndex]);
-
+    chess.move({from: from, to: to}); //Make movement on chess js
+    console.log('fin')
 }
 
 </script>
