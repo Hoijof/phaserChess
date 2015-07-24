@@ -82,17 +82,16 @@ function preload( ) {
 
 }
 
-var board;
-var pieces;
-var cubes;
-var arrayCubes = {};
+var board       = 'undefined';
+var pieces      = 'undefined';
+var cubes       = 'undefined';
+var player      = 'undefined';
+var platforms   = 'undefined';
+var cursors     = 'undefined';
+var rect        = 'undefined';
+var arrayCubes  = {};
 var piecesByPos = {};
-var player;
-var platforms;
-var cursors;
-var rect;
-
-var positions = [];
+//var positions = [];
 
 function create( ) {
 
@@ -284,9 +283,11 @@ function makeRandomMove ()
     // Check game over
     if (possibleMoves.length === 0) return; // TODO finalizar juego
 
-    var randomIndex = Math.floor(Math.random() * possibleMoves.length);
-    var from = possibleMoves[randomIndex].from;
-    var to = possibleMoves[randomIndex].to;
+    //var randomIndex = Math.floor(Math.random() * possibleMoves.length); // Select random movement
+    var movement = selectBestMovement(possibleMoves);
+
+    var from = movement.from;
+    var to = movement.to;
 
     movePiece(from, to);
 }
@@ -299,7 +300,6 @@ function makeRandomMove ()
  */
 function movePiece( from, to )
 {
-    console.log('inicio')
     if( typeof piecesByPos[to] !== 'undefined' ){ // If destination pos is not empty, remove sprite
         piecesByPos[to].destroy();
     }
@@ -309,13 +309,38 @@ function movePiece( from, to )
     piecesByPos[from].y = arrayCubes[to].y;
 
     piecesByPos[to] = piecesByPos[from]; // Override piece position
-    console.log()
-    delete piecesByPos[from];
+
+    delete piecesByPos[from]; // Delete old reference
+    //console.log(piecesByPos[to])
     piecesByPos[to].currentPos = to;
-    console.log(piecesByPos[to])
 
     chess.move({from: from, to: to}); //Make movement on chess js
-    console.log('fin')
+
+}
+
+/**
+ * Select best movement from possibles movements.
+ * For now select movement if
+ *
+ * @param enabledMoves
+ */
+function selectBestMovement( enabledMoves )
+{
+    var resMove;
+    var foundMovement = enabledMoves.some(function( enabledMove ) { //Each possible moves
+
+        var to = enabledMove.to;
+        if( typeof piecesByPos[to] !== 'undefined' ){
+            console.log('posible comer')
+            resMove = enabledMove;
+            return true;
+        }
+    });
+    if ( !foundMovement ){
+        var randomIndex = Math.floor(Math.random() * enabledMoves.length); // Select random movement
+        resMove = enabledMoves[randomIndex];
+    }
+    return resMove;
 }
 
 </script>
